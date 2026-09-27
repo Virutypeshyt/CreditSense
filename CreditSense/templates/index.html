@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CreditSense | Probabilistic Credit Risk Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+    <!-- Sticky Navigation Bar -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <div class="brand-badge">CS</div>
+                <div class="brand-text">
+                    <span class="brand-title">CreditSense</span>
+                    <span class="brand-tag">CREDIT RISK ASSESSMENT</span>
+                </div>
+            </div>
+
+            <div class="nav-links" id="navLinks">
+                <a href="#overview" class="nav-link active">Overview</a>
+                <a href="#predict" class="nav-link">Risk Predictor</a>
+                <a href="#analytics" class="nav-link">Analytics & Stats</a>
+                <a href="#covariance" class="nav-link">Covariance</a>
+                <a href="#methodology" class="nav-link">Bayes Methodology</a>
+                <a href="#performance" class="nav-link">Performance</a>
+            </div>
+
+            <div class="nav-status">
+                <span class="status-dot"></span>
+                <span class="status-text">Gaussian NB Live</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="main-content">
+
+        <!-- HERO / OVERVIEW SECTION -->
+        <section id="overview" class="section hero-section">
+            <div class="hero-left">
+                <div class="pill-badge">
+                    Credit Risk Assessment
+                </div>
+                <h1 class="hero-title">
+                    Credit Risk Assessment
+                </h1>
+                <p class="hero-desc">
+                    CreditSense evaluates borrower default likelihood using <strong>Gaussian Naive Bayes</strong>,
+                    applying <em>Bayes' theorem</em>, <em>class-conditional probability densities</em>, and 
+                    <em>feature independence</em> over financial & demographic metrics.
+                </p>
+
+                <div class="hero-actions">
+                    <a href="#predict" class="btn btn-primary">
+                        <span>Launch Risk Predictor</span>
+                        <span class="btn-arrow">→</span>
+                    </a>
+                    <a href="#analytics" class="btn btn-outline">
+                        <span>Explore Dataset Statistics</span>
+                    </a>
+                </div>
+            </div>
+
+            <div class="hero-right">
+                <div class="summary-card">
+                    <div class="summary-header">
+                        <span class="card-eyebrow">MODEL SPECIFICATION</span>
+                        <span class="model-tag">GaussianNB + Scaler</span>
+                    </div>
+
+                    <div class="metrics-grid-hero">
+                        <div class="metric-item">
+                            <span class="metric-val">{{ accuracy }}%</span>
+                            <span class="metric-lbl">Test Accuracy</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-val">{{ stats.total_records }}</span>
+                            <span class="metric-lbl">Dataset Records</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-val">{{ stats.num_features }}</span>
+                            <span class="metric-lbl">Input Features</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-val">{{ stats.default_pct }}%</span>
+                            <span class="metric-lbl">Historical Default Rate</span>
+                        </div>
+                    </div>
+
+                    <div class="summary-formula">
+                        <code>P(Default | X) ∝ P(Default) × ∏ P(xᵢ | Default)</code>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 2: LOAN RISK PREDICTION -->
+        <section id="predict" class="section">
+            <div class="section-title-wrap">
+                <span class="section-eyebrow">INTERACTIVE EVALUATION</span>
+                <h2 class="section-title">Loan Risk Predictor</h2>
+                <p class="section-subtitle">
+                    Enter prospective applicant financial parameters or select a calibrated sample case to evaluate posterior default probability.
+                </p>
+            </div>
+
+            <!-- Sample Case Quick Fill Buttons -->
+            <div class="sample-cases-bar">
+                <span class="sample-label">Quick Load Sample Scenarios:</span>
+                <div class="sample-btn-group">
+                    <button type="button" class="btn-sample btn-sample-low" id="sampleLowBtn" onclick="loadSampleCase('low')">
+                        <span class="dot-indicator green"></span>
+                        <strong>Low Risk Example</strong>
+                        <span class="sample-details">(High Score, Low DTI)</span>
+                    </button>
+                    <button type="button" class="btn-sample btn-sample-medium" id="sampleMedBtn" onclick="loadSampleCase('medium')">
+                        <span class="dot-indicator yellow"></span>
+                        <strong>Medium Risk Example</strong>
+                        <span class="sample-details">(Moderate DTI & Score)</span>
+                    </button>
+                    <button type="button" class="btn-sample btn-sample-high" id="sampleHighBtn" onclick="loadSampleCase('high')">
+                        <span class="dot-indicator red"></span>
+                        <strong>High Risk Example</strong>
+                        <span class="sample-details">(Subprime, High DTI)</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Form Card -->
+            <div class="card form-card">
+                <form id="predictionForm" novalidate>
+                    <div class="form-grid">
+                        <!-- Income -->
+                        <div class="form-control">
+                            <label for="income">
+                                Annual Income
+                                <span class="required-star">*</span>
+                            </label>
+                            <div class="input-prefix-box">
+                                <span class="prefix">$</span>
+                                <input 
+                                    type="number" 
+                                    id="income" 
+                                    name="income" 
+                                    placeholder="e.g. 65000" 
+                                    min="0" 
+                                    max="1000000" 
+                                    step="500" 
+                                    required>
+                            </div>
+                            <span class="field-hint">Range: $10,000 – $500,000+</span>
+                            <div class="error-msg" id="incomeError"></div>
+                        </div>
+
+                        <!-- Credit Score -->
+                        <div class="form-control">
+                            <label for="credit_score">
+                                Credit Score (FICO)
+                                <span class="required-star">*</span>
+                            </label>
+                            <div class="input-prefix-box">
+                                <span class="prefix">#</span>
+                                <input 
+                                    type="number" 
+                                    id="credit_score" 
+                                    name="credit_score" 
+                                    placeholder="e.g. 680" 
+                                    min="300" 
+                                    max="850" 
+                                    required>
+                            </div>
+                            <span class="field-hint">Valid FICO range: 300 to 850</span>
+                            <div class="error-msg" id="creditScoreError"></div>
+                        </div>
+
+                        <!-- Loan Amount -->
+                        <div class="form-control">
+                            <label for="loan_amount">
+                                Loan Amount Requested
+                                <span class="required-star">*</span>
+                            </label>
+                            <div class="input-prefix-box">
+                                <span class="prefix">$</span>
+                                <input 
+                                    type="number" 
+                                    id="loan_amount" 
+                                    name="loan_amount" 
+                                    placeholder="e.g. 120000" 
+                                    min="1000" 
+                                    max="1000000" 
+                                    step="500" 
+                                    required>
+                            </div>
+                            <span class="field-hint">Principal amount applied for</span>
+                            <div class="error-msg" id="loanAmountError"></div>
+                        </div>
+
+                        <!-- Employment Years -->
+                        <div class="form-control">
+                            <label for="employment_years">
+                                Employment Experience
+                                <span class="required-star">*</span>
+                            </label>
+                            <div class="input-prefix-box">
+                                <span class="prefix">Yr</span>
+                                <input 
+                                    type="number" 
+                                    id="employment_years" 
+                                    name="employment_years" 
+                                    placeholder="e.g. 5.5" 
+                                    min="0" 
+                                    max="60" 
+                                    step="0.1" 
+                                    required>
+                            </div>
+                            <span class="field-hint">Total years of stable employment</span>
+                            <div class="error-msg" id="employmentYearsError"></div>
+                        </div>
+
+                        <!-- Debt to Income -->
+                        <div class="form-control">
+                            <label for="debt_to_income">
+                                Debt-to-Income (DTI) Ratio
+                                <span class="required-star">*</span>
+                            </label>
+                            <div class="input-prefix-box">
+                                <span class="prefix">%</span>
+                                <input 
+                                    type="number" 
+                                    id="debt_to_income" 
+                                    name="debt_to_income" 
+                                    placeholder="e.g. 0.28" 
+                                    min="0.0" 
+                                    max="1.0" 
+                                    step="0.01" 
+                                    required>
+                            </div>
+                            <span class="field-hint">Monthly debt ÷ monthly income (e.g. 0.35 = 35%)</span>
+                            <div class="error-msg" id="dtiError"></div>
+                        </div>
+
+                        <!-- Age -->
+                        <div class="form-control">
+                            <label for="age">
+                                Applicant Age
+                                <span class="required-star">*</span>
+                            </label>
+                            <div class="input-prefix-box">
+                                <span class="prefix">Age</span>
+                                <input 
+                                    type="number" 
+                                    id="age" 
+                                    name="age" 
+                                    placeholder="e.g. 36" 
+                                    min="18" 
+                                    max="100" 
+                                    required>
+                            </div>
+                            <span class="field-hint">Legal borrowing age: 18 – 100</span>
+                            <div class="error-msg" id="ageError"></div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="form-btn-bar">
+                        <button type="submit" id="predictButton" class="btn btn-primary btn-large">
+                            <span class="btn-spinner hidden" id="predictSpinner"></span>
+                            <span id="predictButtonText">Assess Credit Risk</span>
+                            <span class="btn-arrow">→</span>
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-large" onclick="resetAssessment()">
+                            <span>↻ Reset Form & Results</span>
+                        </button>
+                    </div>
+
+                    <!-- Client-side general error alert -->
+                    <div id="generalFormError" class="alert-box alert-danger hidden"></div>
+                </form>
+            </div>
+
+            <!-- Loading Skeleton State -->
+            <div id="loadingState" class="card loading-card hidden">
+                <div class="spinner-pulse"></div>
+                <h3>Computing Gaussian Posterior Densities...</h3>
+                <p>Applying standard scaling and evaluating Gaussian likelihood across 6 features.</p>
+            </div>
+
+            <!-- RESULT DASHBOARD CARD -->
+            <div id="resultSection" class="card result-dashboard hidden">
+                <div class="result-header">
+                    <div>
+                        <span class="section-eyebrow">INFERENCE OUTCOME</span>
+                        <h3 class="result-title">Credit Risk Evaluation Report</h3>
+                    </div>
+                    <div id="riskBadge" class="risk-badge risk-low">
+                        LOW RISK
+                    </div>
+                </div>
+
+                <div class="result-metrics-grid">
+                    <!-- Probability Visual Circle / Bar -->
+                    <div class="result-metric-card highlight">
+                        <span class="result-metric-label">Estimated Default Probability</span>
+                        <div class="gauge-wrapper">
+                            <div class="gauge-circle" id="gaugeCircle">
+                                <span class="gauge-value" id="defaultProbability">0%</span>
+                                <span class="gauge-sub">P(Default | X)</span>
+                            </div>
+                        </div>
+                        <div class="probability-bar-track">
+                            <div class="probability-bar-fill" id="probabilityBarFill" style="width: 0%;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Probability of Repayment -->
+                    <div class="result-metric-card">
+                        <span class="result-metric-label">Repayment Probability</span>
+                        <span class="result-metric-number text-success" id="repaymentProbability">0%</span>
+                        <span class="result-metric-desc">P(No Default | X)</span>
+                        <div class="metric-divider"></div>
+                        <span class="result-metric-label">Binary Classifier Decision</span>
+                        <span class="result-metric-pill" id="predictionPill">Likely to Repay</span>
+                    </div>
+
+                    <!-- Risk Tier & Threshold Explanation -->
+                    <div class="result-metric-card">
+                        <span class="result-metric-label">Risk Classification Tier</span>
+                        <span class="result-risk-level" id="riskLevelText">LOW</span>
+                        <div class="risk-tier-guide">
+                            <div class="tier-item"><span class="badge-dot green"></span> Low: &lt; 40%</div>
+                            <div class="tier-item"><span class="badge-dot yellow"></span> Medium: 40% – 69.9%</div>
+                            <div class="tier-item"><span class="badge-dot red"></span> High: ≥ 70%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Explanation Box -->
+                <div class="explanation-box" id="explanationBox">
+                    <div class="explanation-icon">📋</div>
+                    <div class="explanation-content">
+                        <h4>Probabilistic Assessment Summary</h4>
+                        <p id="resultRecommendation">Assessment completed.</p>
+                        <p class="explanation-sub" id="resultFormulaNote">
+                            Posterior computed using calibrated Gaussian probability density functions across income, credit score, loan amount, employment, debt ratio, and age.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Disclaimer -->
+                <div class="academic-disclaimer">
+                    <span class="disclaimer-badge">Notice</span>
+                    <span>This output is generated by a Gaussian Naive Bayes model and is not intended for commercial banking decisions.</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: DATASET STATISTICS & ANALYTICS -->
+        <section id="analytics" class="section">
+            <div class="section-title-wrap">
+                <span class="section-eyebrow">EMPIRICAL DATASET</span>
+                <h2 class="section-title">Dataset Statistics & Distributions</h2>
+                <p class="section-subtitle">
+                    Calculated directly from the active <code>creditsense_loans.csv</code> dataset (1,500 historical borrower records).
+                </p>
+            </div>
+
+            <!-- Key Dataset Stat Cards -->
+            <div class="stats-overview-grid">
+                <div class="stat-card">
+                    <span class="stat-num">{{ stats.total_records }}</span>
+                    <span class="stat-label">Total Loan Records</span>
+                    <span class="stat-sub">Historical dataset size</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-num">{{ stats.num_features }}</span>
+                    <span class="stat-label">Continuous Features</span>
+                    <span class="stat-sub">Scaled & modeled via Gaussian NB</span>
+                </div>
+                <div class="stat-card card-success">
+                    <span class="stat-num">{{ stats.non_default_count }}</span>
+                    <span class="stat-label">Repaid Loans (Class 0)</span>
+                    <span class="stat-sub">{{ stats.non_default_pct }}% of all samples</span>
+                </div>
+                <div class="stat-card card-danger">
+                    <span class="stat-num">{{ stats.default_count }}</span>
+                    <span class="stat-label">Defaulted Loans (Class 1)</span>
+                    <span class="stat-sub">{{ stats.default_pct }}% of all samples</span>
+                </div>
+            </div>
+
+            <!-- Charts Grid -->
+            <div class="charts-grid">
+                <!-- Target Distribution Doughnut -->
+                <div class="card chart-card">
+                    <div class="chart-header">
+                        <h4>Target Class Prior Distribution</h4>
+                        <span class="chart-subtitle">P(Default = 0) vs P(Default = 1)</span>
+                    </div>
+                    <div class="chart-container-doughnut">
+                        <canvas id="targetDoughnutChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Credit Score Distribution by Outcome -->
+                <div class="card chart-card">
+                    <div class="chart-header">
+                        <h4>Credit Score Distribution by Status</h4>
+                        <span class="chart-subtitle">Repaid vs Default across FICO bands</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="creditScoreChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Debt-to-Income Distribution -->
+                <div class="card chart-card">
+                    <div class="chart-header">
+                        <h4>Debt-to-Income (DTI) Distribution</h4>
+                        <span class="chart-subtitle">Default risk spikes as DTI exceeds 0.35</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="dtiChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Feature Means by Outcome (Class-Conditional Parameters) -->
+                <div class="card chart-card">
+                    <div class="chart-header">
+                        <h4>Gaussian Parameters (Class-Conditional Means)</h4>
+                        <span class="chart-subtitle">Mean values for Repaid (μ₀) vs Default (μ₁)</span>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="incomeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Descriptive Statistics Table -->
+            <div class="card table-card">
+                <div class="table-header">
+                    <h4>Feature Descriptive Statistics & Expectation Values</h4>
+                    <span class="table-sub">Empirical Mean (μ), Standard Deviation (σ), Variance (σ²), and Ranges</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Feature</th>
+                                <th>Mean (Expected Value E[X])</th>
+                                <th>Std Dev (σ)</th>
+                                <th>Variance (σ²)</th>
+                                <th>Median</th>
+                                <th>Min – Max Range</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for col, f in stats.feature_summaries.items() %}
+                            <tr>
+                                <td><strong>{{ f.label }}</strong></td>
+                                <td>{{ f.mean }}</td>
+                                <td>{{ f.std }}</td>
+                                <td>{{ f.variance }}</td>
+                                <td>{{ f.median }}</td>
+                                <td>{{ f.min }} – {{ f.max }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 4: COVARIANCE SECTION -->
+        <section id="covariance" class="section">
+            <div class="section-title-wrap">
+                <span class="section-eyebrow">CORE FEATURES</span>
+                <h2 class="section-title">Covariance & Variable Relationships</h2>
+                <p class="section-subtitle">
+                    Covariance indicates how two continuous random variables change together.
+                </p>
+            </div>
+
+            <!-- Theoretical Formula Box -->
+            <div class="formula-banner">
+                <div class="formula-content">
+                    <span class="formula-label">Mathematical Definition of Covariance</span>
+                    <div class="formula-math">
+                        <code>Cov(X, Y) = E[(X - E[X])(Y - E[Y])] = E[XY] - E[X]E[Y]</code>
+                    </div>
+                    <p class="formula-note">
+                        <strong>Interpretation:</strong> Positive covariance indicates a positive statistical association where variables tend to vary together. Negative covariance indicates an inverse association. Covariance reflects joint variability and does not imply causation.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Key Highlighted Covariance Pairs -->
+            <div class="relationship-cards-grid">
+                {% for rel in stats.key_relationships %}
+                <div class="card relationship-card">
+                    <div class="rel-header">
+                        <h4>{{ rel.label }}</h4>
+                        <span class="rel-badge {% if rel.corr > 0 %}rel-pos{% else %}rel-neg{% endif %}">
+                            Corr: {{ "%+0.2f"|format(rel.corr) }}
+                        </span>
+                    </div>
+                    <div class="rel-metric">
+                        <span class="rel-num">{{ "%0.2e"|format(rel.cov) }}</span>
+                        <span class="rel-lbl">Sample Covariance</span>
+                    </div>
+                    <p class="rel-desc">{{ rel.interpretation }}</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Covariance Matrix Table -->
+            <div class="card table-card">
+                <div class="table-header">
+                    <h4>Empirical Covariance Matrix (from <code>creditsense_loans.csv</code>)</h4>
+                    <span class="table-sub">Diagonal values represent individual feature variances (Var(X) = Cov(X, X))</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table cov-table">
+                        <thead>
+                            <tr>
+                                <th>Feature</th>
+                                {% for col in stats.cov_matrix.labels %}
+                                <th>{{ col }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in stats.cov_matrix.matrix_rows %}
+                            {% set row_idx = loop.index0 %}
+                            <tr>
+                                <td><strong>{{ stats.cov_matrix.labels[row_idx] }}</strong></td>
+                                {% for val in row %}
+                                <td class="{% if loop.index0 == row_idx %}diag-cell{% endif %}">
+                                    {{ "%0.2e"|format(val) }}
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 5: GAUSSIAN NAIVE BAYES METHODOLOGY -->
+        <section id="methodology" class="section">
+            <div class="section-title-wrap">
+                <span class="section-eyebrow">MATHEMATICAL FOUNDATION</span>
+                <h2 class="section-title">How Credit Risk is Calculated</h2>
+                <p class="section-subtitle">
+                    Step-by-step probabilistic decision pipeline implementing Bayesian classification principles.
+                </p>
+            </div>
+
+            <!-- Visual Flowchart -->
+            <div class="card flow-card">
+                <div class="flow-track">
+                    <div class="flow-step">
+                        <div class="step-num">01</div>
+                        <h4>Financial Inputs</h4>
+                        <p>User inputs 6 continuous variables: Income, Score, Loan Amount, Years, DTI, Age.</p>
+                    </div>
+                    <div class="flow-arrow">→</div>
+
+                    <div class="flow-step">
+                        <div class="step-num">02</div>
+                        <h4>Standard Scaling</h4>
+                        <p>Z-Score normalization (z = (x - μ) / σ) to standardize disparate financial magnitudes.</p>
+                    </div>
+                    <div class="flow-arrow">→</div>
+
+                    <div class="flow-step">
+                        <div class="step-num">03</div>
+                        <h4>Gaussian Likelihood</h4>
+                        <p>Compute conditional probability density P(xᵢ | Y = c) via Gaussian bell curve formula.</p>
+                    </div>
+                    <div class="flow-arrow">→</div>
+
+                    <div class="flow-step">
+                        <div class="step-num">04</div>
+                        <h4>Conditional Independence</h4>
+                        <p>Multiply likelihoods: P(X | Y = c) = ∏ P(xᵢ | Y = c) under the naive assumption.</p>
+                    </div>
+                    <div class="flow-arrow">→</div>
+
+                    <div class="flow-step">
+                        <div class="step-num">05</div>
+                        <h4>Bayes' Posterior & Risk</h4>
+                        <p>Apply Bayes' theorem to output exact P(Default | X) and categorize into Low/Medium/High.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Theory Breakdown Cards -->
+            <div class="method-grid">
+                <div class="card method-card">
+                    <div class="method-badge">Equation 1</div>
+                    <h3>Bayes' Theorem</h3>
+                    <p class="method-formula">
+                        <code>P(Y = c | X) = [P(X | Y = c) × P(Y = c)] / P(X)</code>
+                    </p>
+                    <p class="method-text">
+                        Estimates posterior belief of loan default given observed borrower evidence. P(Y) represents the prior historical default rate (47.4%).
+                    </p>
+                </div>
+
+                <div class="card method-card">
+                    <div class="method-badge">Equation 2</div>
+                    <h3>Gaussian Probability Density</h3>
+                    <p class="method-formula">
+                        <code>P(xᵢ | Y=c) = (1 / √(2πσ²)) exp(-(xᵢ - μ)² / (2σ²))</code>
+                    </p>
+                    <p class="method-text">
+                        Because loan features are continuous, each feature is modeled as a normal distribution parameterized by mean (μ) and variance (σ²) per class.
+                    </p>
+                </div>
+
+                <div class="card method-card">
+                    <div class="method-badge">Core Assumption</div>
+                    <h3>Class-Conditional Independence</h3>
+                    <p class="method-formula">
+                        <code>P(x₁, x₂, ..., x₆ | Y) = ∏ᵢ₌₁⁶ P(xᵢ | Y)</code>
+                    </p>
+                    <p class="method-text">
+                        Assumes all input features are independent given the loan outcome. This dramatic simplification makes high-dimensional Bayesian inference computationally tractable.
+                    </p>
+                </div>
+
+                <div class="card method-card">
+                    <div class="method-badge">Decision Boundary</div>
+                    <h3>MAP Decision & Thresholds</h3>
+                    <p class="method-formula">
+                        <code>Risk = f(P(Default | X))</code>
+                    </p>
+                    <p class="method-text">
+                        Probabilities are mapped to decision tiers: &lt;40% (Low Risk), 40%–69.9% (Medium Risk), and ≥70% (High Risk Default Alert).
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 6: MODEL PERFORMANCE -->
+        <section id="performance" class="section">
+            <div class="section-title-wrap">
+                <span class="section-eyebrow">EMPIRICAL VALIDATION</span>
+                <h2 class="section-title">Model Performance & Evaluation</h2>
+                <p class="section-subtitle">
+                    Evaluation metrics measured strictly on the unseen 20% test partition (300 loans, stratified split, random_state=42).
+                </p>
+            </div>
+
+            <!-- Metrics Highlight Cards -->
+            <div class="stats-overview-grid">
+                <div class="stat-card">
+                    <span class="stat-num">{{ accuracy }}%</span>
+                    <span class="stat-label">Model Accuracy</span>
+                    <span class="stat-sub">Overall classification fidelity</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-num">{{ precision }}%</span>
+                    <span class="stat-label">Precision (Class 1)</span>
+                    <span class="stat-sub">TP ÷ (TP + FP)</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-num">{{ recall }}%</span>
+                    <span class="stat-label">Recall / Sensitivity</span>
+                    <span class="stat-sub">TP ÷ (TP + FN)</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-num">{{ f1 }}%</span>
+                    <span class="stat-label">F1-Score</span>
+                    <span class="stat-sub">Harmonic mean of precision & recall</span>
+                </div>
+            </div>
+
+            <!-- Confusion Matrix Display -->
+            <div class="performance-grid">
+                <div class="card cm-card">
+                    <div class="cm-header">
+                        <h4>Test Confusion Matrix (N = {{ cm.total }})</h4>
+                        <span class="cm-sub">Actual vs Predicted classifications</span>
+                    </div>
+
+                    <div class="cm-table-wrap">
+                        <table class="cm-table">
+                            <thead>
+                                <tr>
+                                    <th colspan="2" rowspan="2"></th>
+                                    <th colspan="2" class="cm-header-top">Predicted Class</th>
+                                </tr>
+                                <tr>
+                                    <th>Repaid (0)</th>
+                                    <th>Default (1)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <th rowspan="2" class="cm-header-left"><span>Actual</span></th>
+                                    <th class="cm-row-label">Repaid (0)</th>
+                                    <td class="cm-cell cm-tn">
+                                        <span class="cm-value">{{ cm.tn }}</span>
+                                        <span class="cm-type">True Negative (TN)</span>
+                                    </td>
+                                    <td class="cm-cell cm-fp">
+                                        <span class="cm-value">{{ cm.fp }}</span>
+                                        <span class="cm-type">False Positive (FP)</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th class="cm-row-label">Default (1)</th>
+                                    <td class="cm-cell cm-fn">
+                                        <span class="cm-value">{{ cm.fn }}</span>
+                                        <span class="cm-type">False Negative (FN)</span>
+                                    </td>
+                                    <td class="cm-cell cm-tp">
+                                        <span class="cm-value">{{ cm.tp }}</span>
+                                        <span class="cm-type">True Positive (TP)</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card cm-info-card">
+                    <h4>Banking & Underwriting Interpretation</h4>
+                    <div class="interpretation-list">
+                        <div class="inter-item">
+                            <span class="inter-icon">🛡️</span>
+                            <div>
+                                <strong>High Recall ({{ recall }}%):</strong>
+                                <p>Captures nearly 79% of all actual defaulters, mitigating substantial credit loss risk for financial institutions.</p>
+                            </div>
+                        </div>
+                        <div class="inter-item">
+                            <span class="inter-icon">⚖️</span>
+                            <div>
+                                <strong>Precision ({{ precision }}%):</strong>
+                                <p>When the model predicts a default, it is accurate ~73.2% of the time, avoiding excessive rejection of creditworthy customers.</p>
+                            </div>
+                        </div>
+                        <div class="inter-item">
+                            <span class="inter-icon">📊</span>
+                            <div>
+                                <strong>Stratified Split:</strong>
+                                <p>Maintains identical class proportions (47.4% default) in both training and test partitions for rigorous validation.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-left">
+                <strong>CreditSense</strong> • Credit Risk Assessment Dashboard
+            </div>
+            <div class="footer-right">
+                Built with Python • Flask • scikit-learn • Gaussian Naive Bayes • Chart.js
+            </div>
+        </div>
+    </footer>
+
+    <!-- Pass backend chart data safely to JavaScript -->
+    <script>
+        window.CREDITSENSE_DATA = {
+            stats: {{ stats | tojson }},
+            metrics: {
+                accuracy: {{ accuracy }},
+                precision: {{ precision }},
+                recall: {{ recall }},
+                f1: {{ f1 }},
+                cm: {{ cm | tojson }}
+            }
+        };
+    </script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
